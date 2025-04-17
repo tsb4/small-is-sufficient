@@ -1,0 +1,16 @@
+id,owner,created,Utility,nParams,downloads,totalDownloads
+hustvl/yolos-tiny,hustvl,2022-04-26,0.2572,6488736,153958,8576567
+hustvl/yolos-small-300,hustvl,2022-04-26,0.3336,30684768,92,34573
+hustvl/yolos-small,hustvl,2022-04-26,0.3326,30684768,45365,1143195
+SenseTime/deformable-detr-single-scale-dc5,SenseTime,2022-03-03,0.4139,34172833,116,33198
+SenseTime/deformable-detr-single-scale,SenseTime,2022-03-03,0.3923,34172833,320,32826
+SenseTime/deformable-detr,SenseTime,2022-03-03,0.44530000000000003,40175905,7683,417807
+SenseTime/deformable-detr-with-box-refine,SenseTime,2022-03-03,0.4629,40955900,1651,39657
+facebook/detr-resnet-50-dc5,facebook,2022-03-03,0.4326,41631008,2060,25993
+facebook/detr-resnet-50,facebook,2022-03-03,0.4208,41631008,1207679,11240207
+microsoft/conditional-detr-resnet-50,microsoft,2022-09-09,0.4093,43524641,11075,69521
+jozhang97/deta-resnet-50-24-epochs,jozhang97,2023-01-30,0.4935,48544729,210,29774
+jozhang97/deta-resnet-50-small,jozhang97,2022-12-21,0.4877,48544729,3123,99662
+facebook/detr-resnet-101-dc5,facebook,2022-03-03,0.4489,60675360,12852,281439
+facebook/detr-resnet-101,facebook,2022-03-03,0.4351,60675360,277755,4905422
+jozhang97/deta-swin-large,jozhang97,2023-01-30,0.5564,219273037,47849,306583

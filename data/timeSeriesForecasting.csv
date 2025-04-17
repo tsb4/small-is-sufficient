@@ -1,0 +1,7 @@
+id,owner,created,Utility,nParams,downloads,totalDownloads
+huggingface/informer-tourism-monthly,huggingface,2020-12-14,0.11599999999999999,83807.0,35260,
+huggingface/autoformer-tourism-monthly,huggingface,2021-06-24,0.495,264000.0,46349,
+ibm-granite/granite-timeseries-patchtst,ibm-granite,2022-11-27,0.5780000000000001,616000.0,7030,
+Salesforce/moirai-1.0-R-large,Salesforce,2024-02-04,0.486,311000000.0,26020,
+Salesforce/moirai-moe-1.0-R-base,Salesforce,2024-02-04,0.544,91000000.0,5269,
+Salesforce/moirai-1.0-R-small,Salesforce,2024-02-04,0.5880000000000001,14000000.0,56895,
