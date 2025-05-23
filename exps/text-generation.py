@@ -11,7 +11,7 @@ quantization_config = BitsAndBytesConfig(load_in_8bit=True)
 
 
 
-# Load the model and tokenizer
+#Define Model
 models = ["microsoft/Phi-3-mini-128k-instruct"]  # Replace with the exact model name
 
 
@@ -19,8 +19,8 @@ models = ["microsoft/Phi-3-mini-128k-instruct"]  # Replace with the exact model 
 
 for model_name in models:
     print("Model name: ", model_name)
-    
-   
+
+    #Load Model
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
@@ -40,13 +40,20 @@ for model_name in models:
     # Tokenize the input prompt
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to("cuda")
     energies = []
+
+    #Testing Multiple times
     for i in range(10):
+        # Wait 5 seconds
         time.sleep(5)
+        #Empty CUDA cache
         torch.cuda.empty_cache()
+        
+        #Initialize CarbonTracker
         tracker = CarbonTracker(epochs=1, update_interval=1, verbose=2, components="all")
         tracker.epoch_start()
+        
         # Generate text with exact token limit
-        max_tokens = 50  # Generate exactly 100 tokens
+        max_tokens = 50  # Generate exactly 50 tokens
         output = model.generate(
             input_ids,
             max_new_tokens=max_tokens,
@@ -56,14 +63,14 @@ for model_name in models:
 
         # Decode the generated tokens
         generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        
+        # Extract and print the last 100 tokens
+        generated_tokens = tokenizer.tokenize(generated_text)
+        
+        # Capture energy
         timing, energy, divided = tracker.epoch_end()
         divided = [float(d) for d in divided]
         
-
-        # Extract and print the last 100 tokens
-        generated_tokens = tokenizer.tokenize(generated_text)
-        print("Generated Text:")
-        print(generated_text)
-        print("\nToken Count:", len(generated_tokens))
+        # Saving information
         energies.append({"tim": timing, "energy":energy, "divided":divided, "token": len(generated_tokens)})
     info = {'num_params':num_parameters,'energies':energies}

@@ -19,25 +19,36 @@ models = [{'model':'timm/tiny_vit_21m_512.dist_in22k_ft_in1k'},
          {'model':"timm/eva02_large_patch14_448.mim_m38m_ft_in22k_in1k"}]
 
 for model in models:
+    #Load Model
     model_name= model['model']
     model = timm.create_model(model_name, pretrained=True)
     model = model.eval()
+    
+    #Model to CUDA
     model = model.to("cuda")
 
     # get model specific transforms (normalization, resize)
     data_config = timm.data.resolve_model_data_config(model)
     transforms = timm.data.create_transform(**data_config, is_training=False)
     num_params = sum(p.numel() for p in model.parameters())
+
     energies = []
 
     for _ in range(10):
+        #Model testing
+
+        #Empty CUDA cache
         torch.cuda.empty_cache()
+        #Wait 5 seconds
         time.sleep(5)
+        #Initialize CarbonTracker
         tracker = CarbonTracker(epochs=1, update_interval=1, verbose=2, components="all")
         tracker.epoch_start()
         output = model(transforms(img).unsqueeze(0).to("cuda"))  # unsqueeze single image into batch of 1
+        #Capture Energy
         timing, energy, divided = tracker.epoch_end()
         divided = [float(d) for d in divided]
+        #saving information
         energies.append({"tim": timing, "energy":energy, "divided":divided})
     info = {'num_params':num_params,'energies':energies}
     print(info)

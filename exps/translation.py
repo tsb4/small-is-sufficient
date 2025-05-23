@@ -2,12 +2,13 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from  carbontracker.tracker import CarbonTracker
 import json, torch, time
 
-# Load the tokenizer and model
 
-model_name = 'google-t5/t5-11b'
+#Load Model and tokenizer
 model_name = 'google-t5/t5-small'
 tokenizer = T5Tokenizer.from_pretrained(model_name.split('/')[1])
 model = T5ForConditionalGeneration.from_pretrained(model_name.split('/')[1])
+
+# Set model to CUDA
 model=model.to("cuda")
 
 
@@ -16,24 +17,31 @@ input_text = "translate English to German: I declare resumed the session of the 
 # input_text = "translate English to German: This is a beautiful word."
 input_ids = tokenizer.encode(input_text, return_tensors='pt').to("cuda")
 
+# Get number of parameters
 num_params = sum(p.numel() for p in model.parameters())
 energies = []
+
+# Testing multiple times
 for _ in range(10):
     torch.cuda.empty_cache()
     time.sleep(5)
+
+    # Initialize CarbonTracker
     tracker = CarbonTracker(epochs=1, update_interval=1, verbose=2, components="all")
     tracker.epoch_start()
-    #print(data)
+    
+    # Inference
     try:
         outputs = model.generate(input_ids, max_length=40, num_beams=4, early_stopping=True)
 
     except:
         raise(0)
 
+    # Capture energy
     timing, energy, divided = tracker.epoch_end()
     divided = [float(d) for d in divided]
+
+    # Saving information
     energies.append({"tim": timing, "energy":energy, "divided":divided})
 info = {'num_params':num_params,'energies':energies}
 print(info)
-
-# Generate the output

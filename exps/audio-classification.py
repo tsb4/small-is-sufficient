@@ -4,22 +4,23 @@ from  carbontracker.tracker import CarbonTracker
 import json, torch, time
 from datasets import load_dataset
 import torch
-#Load Model
 
+# Model example
+
+#Load Model
 model_name = "MIT/ast-finetuned-audioset-10-10-0.4593"
 extractor = AutoFeatureExtractor.from_pretrained(model_name)
 model = ASTForAudioClassification.from_pretrained(model_name)
 
-# model_name = "Simon-Kotchou/ssast-small-patch-audioset-16-16"
-# extractor = AutoFeatureExtractor.from_pretrained(model_name)
-# model = AutoModelForAudioClassification.from_pretrained(model_name)
+#Model to CUDA
+model = model.to("cuda")
 
 num_params = sum(p.numel() for p in model.parameters())
 energies = []
 
 #Test 10 times
 for _ in range(10):
-    
+    #Load dataset
     dataset = load_dataset("hf-internal-testing/librispeech_asr_demo", "clean", split="validation", trust_remote_code=True)
     dataset = dataset.sort("id")
 
@@ -34,14 +35,14 @@ for _ in range(10):
     tracker.epoch_start()
 
     for i in range(10):
-    # audio file is decoded on the fly
-        inputs = extractor(dataset[i]["audio"]["array"], sampling_rate=sampling_rate, return_tensors="pt")
+        inputs = extractor(dataset[i]["audio"]["array"], sampling_rate=sampling_rate, return_tensors="pt").to("cuda")
         try:
             with torch.no_grad():
                 logits = model(**inputs).logits
         except:
             raise(0)
     #Capture Energy
+    
     timing, energy, divided = tracker.epoch_end()
     divided = [float(d) for d in divided]
     energies.append({"tim": timing, "energy":energy, "divided":divided})
