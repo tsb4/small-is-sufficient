@@ -28,30 +28,19 @@ sampled_data = list(sampled_data)
 for i,d in enumerate(sampled_data):
     sampled_data[i]['audio']['raw'] = d['audio']['array']
 
-with open("openAsrLeaderboard.json", "r") as file:
-    data_models = json.load(file)
-data_models = sorted(data_models, key=lambda x:x['nParams'], reverse=False)
-data_models_news = []
-for d in data_models:
-    if d['nParams']>0:
-        data_models_news.append(d['id'])
-data_models = data_models_news
+data_models = ["openai/whisper-tiny.en"]
 
 # Iterate over model names and print the number of parameters
 for model_name in data_models:
-    if "whisper" in model_name:
-        processor = AutoProcessor.from_pretrained(model_name)
-        model = AutoModelForSpeechSeq2Seq.from_pretrained(model_name)
-    else:
-        processor = AutoProcessor.from_pretrained(model_name)
-        model = AutoModelForCTC.from_pretrained(model_name)
+    processor = AutoProcessor.from_pretrained(model_name)
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(model_name)
     pipe = pipeline(
         "automatic-speech-recognition",
         model=model,
         tokenizer=processor.tokenizer,
         feature_extractor=processor.feature_extractor,
         torch_dtype=torch_dtype,
-        device=device,
+        device="cuda",
     )
     num_params = sum(p.numel() for p in model.parameters())
     energies = []

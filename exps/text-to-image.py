@@ -6,8 +6,8 @@ import json
 import torch
 
 model_name = "dreamlike-art/dreamlike-photoreal-2.0"
-model_name = "stabilityai/stable-diffusion-xl-base-1.0"
-model_name = "playgroundai/playground-v2.5-1024px-aesthetic"
+# model_name = "stabilityai/stable-diffusion-xl-base-1.0"
+# model_name = "playgroundai/playground-v2.5-1024px-aesthetic"
 
 pipe = DiffusionPipeline.from_pretrained(model_name, torch_dtype=torch.float16)
 # Function to count parameters in a model
@@ -25,7 +25,7 @@ for name, component in pipe.components.items():
         print(f"{name}: {num_params} parameters")
         total_params += num_params
 print(f"Total parameters in DiffusionPipeline: {total_params/1e9}")
-pipe.to("cuda")
+pipe = pipe.to("cuda")
 
 
 prompt = "Astronaut in a jungle, cold color palette, muted colors, detailed, 8k"

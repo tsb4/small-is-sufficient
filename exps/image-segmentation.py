@@ -14,10 +14,12 @@ model = SegformerForSemanticSegmentation.from_pretrained(model_name)
 # processor = AutoImageProcessor.from_pretrained(model_name)
 # model = AutoModel.from_pretrained(model_name)
 
+model = model.to("cuda")
+
 url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 image = Image.open(requests.get(url, stream=True).raw)
 
-inputs = processor(images=image, return_tensors="pt")
+inputs = processor(images=image, return_tensors="pt").to("cuda")
 
 num_params = sum(p.numel() for p in model.parameters())
 energies = []

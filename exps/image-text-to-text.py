@@ -2,15 +2,23 @@ import math
 import numpy as np
 import torch
 import torchvision.transforms as T
-from decord import VideoReader, cpu
+# from decord import VideoReader, cpu
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
 from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+import requests
+
+from PIL import Image
+from transformers import AutoProcessor, AutoModelForVision2Seq
+
 from datasets import load_dataset
 import ast
 import json
 import os
 from  carbontracker.tracker import CarbonTracker
+import time
 
 
 
@@ -18,7 +26,7 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 MODE = 'direct'
-SETTING = 'standard'
+SETTING = 'standard (4 options)'
 
 import yaml
 with open("prompts.yaml", "r") as file:
@@ -60,10 +68,10 @@ def vision_mmmu_doc_to_visual(doc):
 
 def import_dataset():
     # Load the dataset (replace 'MMMU-Pro' with the correct name if available)
-    dataset = load_dataset("MMMU/MMMU_Pro", "standard", split="test")
+    dataset = load_dataset("MMMU/MMMU_Pro", SETTING, split="test")
 
     # Take a small sample of 5 examples (adjust as necessary)
-    small_sample = dataset.select(range(1))
+    small_sample = dataset.select(range(2))
 
     # Inspect the sample
     print(small_sample)
@@ -184,57 +192,102 @@ def split_model(model_name):
 
     return device_map
 
-# If you set `load_in_8bit=True`, you will need one 80GB GPUs.
-# If you set `load_in_8bit=False`, you will need at least two 80GB GPUs.
-path = 'OpenGVLab/InternVL2-40B'
-device_map = split_model('InternVL2-40B')
-model = AutoModel.from_pretrained(
-    path,
-    torch_dtype=torch.bfloat16,
-    load_in_8bit=True,
-    low_cpu_mem_usage=True,
-    use_flash_attn=True,
-    trust_remote_code=True).eval()
-tokenizer = AutoTokenizer.from_pretrained(path, trust_remote_code=True, use_fast=False)
-from pynvml import *
-nvmlInit()
-h = nvmlDeviceGetHandleByIndex(0)
-info = nvmlDeviceGetMemoryInfo(h)
-print(f'total    : {info.total}')
-print(f'free     : {info.free}')
-print(f'used     : {info.used}')
-# set the max number of tiles in `max_num`
-pixel_values = load_image('./examples_image1.jpg', max_num=12).to(torch.bfloat16).cuda()
-generation_config = dict(max_new_tokens=1024, do_sample=True)
 
-small_sample = import_dataset()
-counter = 0
-for sample in small_sample:
-    counter += 1
-    #if counter==1:
-    #    continue
-    torch.cuda.empty_cache()
-    images, question = process_prompt(sample)
-    pixel_values = convert_image(images[0], max_num=12).to(torch.bfloat16).cuda()
-    h = nvmlDeviceGetHandleByIndex(0)
-    info = nvmlDeviceGetMemoryInfo(h)
-    print(f'total    : {info.total}')
-    print(f'free     : {info.free}')
-    print(f'used     : {info.used}')
-    lats = []
+data_models = ["microsoft/kosmos-2-patch14-224"]
+sample = import_dataset()
+print(sample['question'], sample['image_1'])
+
+# Iterate over model names and print the number of parameters
+for idx_model,m in enumerate(data_models[:]):
+    model_name = m
+
+
+    
+    print(model_name)
+    # try:
+    #     model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    #         model_name, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    #     )
+    #     model.to(device)
+
+    #     processor = AutoProcessor.from_pretrained(model_name)
+    # except:
+    try:
+        model = AutoModelForVision2Seq.from_pretrained(model_name, trust_remote_code=True).to('cuda')
+        #model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, torch_dtype=torch.bfloat16)
+        # For Nvidia GPUs support BF16 (like A100, H100, RTX3090)
+        model = model.to(device='cuda', dtype=torch.bfloat16)
+        processor = AutoProcessor.from_pretrained(model_name)
+        # For Nvidia GPUs do NOT support BF16 (like V100, T4, RTX2080)
+        #model = model.to(device='cuda', dtype=torch.float16)
+        # For Mac with MPS (Apple silicon or AMD GPUs).
+        # Run with `PYTORCH_ENABLE_MPS_FALLBACK=1 python test.py`
+        #model = model.to(device='mps', dtype=torch.float16)
+
+        # tokenizer = AutoTokenizer.from_pretrained(model_name, padding_side='left',trust_remote_code=True)
+    except:
+        raise(0)
+    num_params = sum(p.numel() for p in model.parameters())
+    # Dynamically go through components of the pipeline
     energies = []
-    for i in range(5):
+    
+    prompt = [s['question'] for s in sample]
+
+    image = [s['image_1'] for s in sample]
+    print(image)
+
+    
+    print(image, prompt)
+    # inputs = processor(text=prompt, return_tensors="pt", padding=True)
+    # inputs = {key: value.to('cuda') for key, value in inputs.items()}
+    #image_tensor = model.process_images(image, model.config).to(dtype=model.dtype, device='cuda')
+
+    # inputs = processor(text=prompt, images=image, return_tensors="pt").to('cuda')
+    print(image, prompt)
+    inputs = processor(image, prompt,padding=True, truncation=True, return_tensors="pt").to("cuda", torch.float16)
+
+    # Tokenize the input prompt
+    for _ in range(10):
+        
+        torch.cuda.empty_cache()
+        time.sleep(5)
+        st = time.time()
         tracker = CarbonTracker(epochs=1, update_interval=1, verbose=2, components="all")
         tracker.epoch_start()
-        response = model.chat(tokenizer, pixel_values, question, generation_config)
+        #print(data)
+        try:
+            for i in range(5):
+                with torch.no_grad():
+                    
+                    generated_ids = model.generate(
+                        **inputs,
+                        #images=image_tensor,
+                        max_new_tokens=2000,  # Generate a long response
+                        num_beams=5,  # Force beam search (slower)
+                        repetition_penalty=2.0,  # Encourage varied text generation
+                        length_penalty=2.0,  # Encourage longer output
+                    )
+            # msgs = [{'role': 'user', 'content': prompt[0]}]
+            # # generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            # print(image[0])
+            # res, context, _ = model.chat(
+            # image=image[0],
+            # msgs=msgs,
+            # context=None,
+            # tokenizer=tokenizer,
+            # sampling=True,
+            # temperature=0.7
+            # )
+            # # Specify `cleanup_and_extract=False` in order to see the raw model generation.
+            # processed_text = processor.post_process_generation(generated_text, cleanup_and_extract=False)
+
+        except:
+            raise(0)
+        ed = time.time()
         timing, energy, divided = tracker.epoch_end()
-        lats.append(timing)
-        energies.append(energy)
+        print
         divided = [float(d) for d in divided]
-    carbon_tracker_info ={"n_params": sum(p.numel() for p in model.parameters()), "tim": lats, "energy":energies}
-    with open(f"results_{os.getpid()}_t.json", 'w') as file:
-        json.dump(carbon_tracker_info, file, indent=4)
-    print(f'User: {question}\nAssistant: {response}\nAnswer:{sample["answer"]}')
-    del pixel_values
-    print("Average energy: ", np.array(energies).mean())
-    print("Average latency: ", np.array(lats).mean())
+        energies.append({"tim": timing, "energy":energy, "divided":divided, "timestamp_start":st, "timestamp_end":ed})
+    info = {'num_params':num_params,'energies':energies}
+#top5_probabilities, top5_class_indices = torch.topk(output.softmax(dim=1) * 100, k=5)
+print(f" Number of parameters: {num_params}")

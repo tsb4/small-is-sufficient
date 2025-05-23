@@ -12,7 +12,7 @@ quantization_config = BitsAndBytesConfig(load_in_8bit=True)
 
 
 # Load the model and tokenizer
-models = ["microsoft/Phi-3-mini-128k-instruct", "01-ai/Yi-1.5-34B-Chat"]  # Replace with the exact model name
+models = ["microsoft/Phi-3-mini-128k-instruct"]  # Replace with the exact model name
 
 
 
@@ -26,7 +26,7 @@ for model_name in models:
         model_name,
         trust_remote_code=True,
         torch_dtype=torch.float16,  # FP8 is generally emulated using FP16
-        device_map="auto",
+        device_map="cuda",
         quantization_config=quantization_config  # 8-bit quantization
     )
     
@@ -38,7 +38,7 @@ for model_name in models:
     prompt = "Write a 50-token story about a futuristic world where AI and humans coexist:"
 
     # Tokenize the input prompt
-    input_ids = tokenizer.encode(prompt, return_tensors="pt")
+    input_ids = tokenizer.encode(prompt, return_tensors="pt").to("cuda")
     energies = []
     for i in range(10):
         time.sleep(5)

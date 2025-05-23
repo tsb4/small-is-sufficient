@@ -15,13 +15,14 @@ img = Image.open(urlopen(
 ))
 
 #Test different models
-data = [{'model':'timm/tiny_vit_21m_512.dist_in22k_ft_in1k'}, 
+models = [{'model':'timm/tiny_vit_21m_512.dist_in22k_ft_in1k'}, 
          {'model':"timm/eva02_large_patch14_448.mim_m38m_ft_in22k_in1k"}]
 
-for model in data:
+for model in models:
     model_name= model['model']
     model = timm.create_model(model_name, pretrained=True)
     model = model.eval()
+    model = model.to("cuda")
 
     # get model specific transforms (normalization, resize)
     data_config = timm.data.resolve_model_data_config(model)
@@ -34,7 +35,7 @@ for model in data:
         time.sleep(5)
         tracker = CarbonTracker(epochs=1, update_interval=1, verbose=2, components="all")
         tracker.epoch_start()
-        output = model(transforms(img).unsqueeze(0))  # unsqueeze single image into batch of 1
+        output = model(transforms(img).unsqueeze(0).to("cuda"))  # unsqueeze single image into batch of 1
         timing, energy, divided = tracker.epoch_end()
         divided = [float(d) for d in divided]
         energies.append({"tim": timing, "energy":energy, "divided":divided})

@@ -20,11 +20,11 @@ docs = [
 
 
 model_name = "dunzhang/stella_en_400M_v5"
-model_name = "BAAI/bge-multilingual-gemma2"
+# model_name = "BAAI/bge-multilingual-gemma2"
 model = SentenceTransformer(model_name, trust_remote_code=True,model_kwargs={"torch_dtype": torch.float16})
 num_params = sum(p.numel() for p in model.parameters())
 print("Num Parameters: ", num_params)
-model.to("cuda")
+model = model.to("cuda")
 
 
 energies = []

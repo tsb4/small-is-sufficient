@@ -2,6 +2,25 @@ from transformers import AutoModel, AutoConfig
 from  carbontracker.tracker import CarbonTracker
 import json, torch, time
 
+import requests
+
+# URL of the ETTh1.csv dataset from the official ETT repository
+url = "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv"
+output_file = "etth.csv"
+
+def download_etth1(url, output_file):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        with open(output_file, "wb") as f:
+            f.write(response.content)
+        print(f"Downloaded successfully: {output_file}")
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to download: {e}")
+
+download_etth1(url, output_file)
+
+
 # Load the model configuration
 model_name = "ibm-research/testing-patchtst_etth1_pretrain"
 config = AutoConfig.from_pretrained(model_name)
@@ -42,7 +61,7 @@ seq_length = 512
 num_samples = normalized_data.shape[0] - seq_length
 
 # Create input sequences
-input_sequences = torch.stack([normalized_data[i:i+seq_length] for i in range(num_samples)])
+input_sequences = torch.stack([normalized_data[i:i+seq_length] for i in range(num_samples)]).to("cuda")
 
 print("Input shape:", input_sequences.shape)  # Expected: (num_samples, seq_length, num_features)
 
@@ -53,6 +72,7 @@ from transformers import AutoModel
 #model_name = "ibm-research/patchtsmixer-etth1-pretrain"
 model_name = "ibm-granite/granite-timeseries-patchtst"
 model = AutoModel.from_pretrained(model_name)
+model = model.to("cuda")
 
 num_params = sum(p.numel() for p in model.parameters())
 print("Params", num_params)
